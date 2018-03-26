@@ -198,6 +198,9 @@ class CSecurityManager extends CApplicationComponent
 	 */
 	public function encrypt($data,$key=null)
 	{
+        if (extension_loaded('openssl')) {
+            return $this->encryptSsl($data);
+        }
 		$module=$this->openCryptModule();
 		$key=$this->substr($key===null ? md5($this->getEncryptionKey()) : $key,0,@mcrypt_enc_get_key_size($module));
 		srand();
@@ -209,6 +212,19 @@ class CSecurityManager extends CApplicationComponent
 		return $encrypted;
 	}
 
+    /**
+     * @param $data
+     * @return string
+     */
+    protected function encryptSsl($data)
+    {
+        $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('des-cbc'));
+
+        $encrypted = openssl_encrypt($data, 'des-cbc', $this->_encryptionKey, 0, $iv);
+
+        return base64_encode($encrypted . '::' . $iv);
+    }
+
 	/**
 	 * Decrypts data
 	 * @param string $data data to be decrypted.
@@ -218,6 +234,9 @@ class CSecurityManager extends CApplicationComponent
 	 */
 	public function decrypt($data,$key=null)
 	{
+        if (extension_loaded('openssl')) {
+            return $this->decryptSsl($data);
+        }
 		$module=$this->openCryptModule();
 		$key=$this->substr($key===null ? md5($this->getEncryptionKey()) : $key,0,@mcrypt_enc_get_key_size($module));
 		$ivSize=@mcrypt_enc_get_iv_size($module);
@@ -228,6 +247,17 @@ class CSecurityManager extends CApplicationComponent
 		@mcrypt_module_close($module);
 		return rtrim($decrypted,"\0");
 	}
+
+    /**
+     * @param $data
+     * @return string
+     */
+    protected function decryptSsl($data)
+    {
+        list($encrypted, $iv) = explode('::', base64_decode($data), 2);
+
+        return openssl_decrypt($encrypted, 'des-cbc', $this->_encryptionKey, 0, $iv);
+    }
 
 	/**
 	 * Opens the mcrypt module with the configuration specified in {@link cryptAlgorithm}.
