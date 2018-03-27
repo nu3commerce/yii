@@ -213,7 +213,7 @@ class CSecurityManager extends CApplicationComponent
 	}
 
     /**
-     * @param $data
+     * @param string $data
      * @return string
      */
     protected function encryptSsl($data)
@@ -250,11 +250,16 @@ class CSecurityManager extends CApplicationComponent
 
     /**
      * @param $data
-     * @return string
+     * @return null|string
      */
     protected function decryptSsl($data)
     {
-        list($encrypted, $iv) = explode('::', base64_decode($data), 2);
+        $data = base64_decode($data);
+        if (!strstr($data, '::')) {
+            return null;
+        }
+
+        list($encrypted, $iv) = explode('::',$data, 2);
 
         return openssl_decrypt($encrypted, 'des-cbc', $this->_encryptionKey, 0, $iv);
     }
